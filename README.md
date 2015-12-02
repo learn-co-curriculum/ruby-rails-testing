@@ -315,3 +315,5 @@ Following each of the scenarios, we set up the expectation. This is the componen
 * [Github](http://www.github.com/) - [Rspec Rails Examples](https://github.com/eliotsykes/rspec-rails-examples)
 * [Flatiron School Books](http://books.flatironschool.com/) - [Everyday Rails Testing with RSpec](http://books.flatironschool.com/books/114)
 
+
+<a href='https://learn.co/lessons/ruby-rails-testing' data-visibility='hidden'>View this lesson on Learn.co</a>
