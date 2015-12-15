@@ -16,7 +16,7 @@ well-tested application at the model level ensures that you have a big step
 towards a reliable code base.
 
 A model spec tests specifically for three primary pieces of information:
-* `create` method, when passed valid attributes, is valid
+* The `create` method is valid when passed valid attributes
 * Validations fail when when passed invalid attributes
 * Class and instance methods perform as expected
 
