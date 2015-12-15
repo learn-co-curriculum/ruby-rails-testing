@@ -30,7 +30,7 @@ describe Contact do
   it "is invalid without a firstname" do
   end
 
-  it"is invalid without a lastname" do
+  it "is invalid without a lastname" do
   end
 
   it "is invalid without an email address" do
