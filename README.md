@@ -72,10 +72,7 @@ After this lesson, you should be able to...
 - Describe the usage of Capybara in feature testing.
 
 
-A model spec tests specifically for three primary pieces of information:
-* The `create` method is valid when passed valid attributes
-* Validations fail when when passed invalid attributes
-* Class and instance methods perform as expected
+# Three Test Types
 
 We'll be covering three types of tests:
 
@@ -86,8 +83,6 @@ We'll be covering three types of tests:
 Features are the fanciest, so we'll leave them for last. They are preferred over
 regular Rails "View" tests.
 
-  it "is invalid without a lastname" do
-  end
 
 # RSpec
 
@@ -104,23 +99,7 @@ rails new cool_app -T
 Then, you will add the gem to your Gemfile:
 
 ```ruby
-describe Contact do
-  it "is valid with a firstname, lastname and email" do
-    expect(Contact.new(firstname: "Josh", lastname: "Owens", email: "josh@flatironschool.com")).to be_valid
-  end
-
-  it "is invalid without a firstname" do
-    expect(Contact.new(firstname: nil)).to have(1).errors_on(:firstname)
-  end
-
-  it "is invalid without a lastname" do
-    expect(Contact.new(lastname: nil)).to have(1).errors_on(:lastname)
-  end
-
-  it "is invalid without an email address" do
-    expect(Contact.new(email: nil)).to have(1).errors_on(:email)
-  end
-end
+gem 'rspec-rails'
 ```
 
 And use the builtin generator to add a `spec` folder with the right boilerplate:
