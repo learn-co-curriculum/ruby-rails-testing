@@ -112,6 +112,35 @@ bundle exec rails g rspec:install
 This is the Rails equivalent of the usual `rspec --init`.
 
 
+# An Automobile Analogy
+
+It's not enough to know *how* to test applications; we must also understand
+*why* it makes sense to test them in a certain way. To help with this, try
+thinking of Rails applications like cars:
+
+- **Models** are the **basic parts** that make cars useful, like the fuel tank,
+  engine, and tires.
+
+- **Views** are the **interactive parts** that the driver (user) can see and
+  touch, like the steering wheel, pedals, and gear shift.
+
+- **Controllers** are the rest of the **connecting parts** under the hood that
+  connect the views to the models, like how the steering column (along with the
+  rest of the steering assembly) connects the wheel to the tires. The users don't
+  really see them, think of them, or even necessarily know they exist, but they're
+  just as necessary.
+
+Models are not too difficult to test because they have very specific purposes
+that can be easily separated from the rest of the application.
+
+This holds true for cars as well: a good tire has a tread that grips the road in
+adverse conditions, doesn't puncture easily, and so on. You don't really need to
+think about the rest of the car when you're testing what makes a good wheel.
+
+This gets a little trickier for views and controllers, but we'll talk more about
+that once we're done with models.
+
+
 # Model Tests
 
 These go in `spec/models`, one file per model.
@@ -255,16 +284,233 @@ detailed assertions more readable.
 
 # Controller Tests
 
+The biggest risk in writing controller tests is redundancy: controllers exists
+to connect views and models, so it's difficult to test them in isolation.
+
+First, we'll go over **how** to write controller tests, then our discussion of
+the **why** will bring us into the final subject of "feature tests".
+
+```ruby
+# spec/controllers/monsters_controller_spec.rb
+
+describe MonstersController, type: :controller do
+  let(:attributes) do
+    {
+      name: "Dustwing",
+      size: "tiny",
+      taxonomy: "Abradacus Nonexistus"
+    }
+  end
+
+  it "renders the show template" do
+    monster = Monster.create!(attributes)
+    get :show, id: monster.id
+    expect(response).to render_template(:show)
+  end
+
+  describe "creation" do
+    before { post :create, monster: attributes }
+    let(:monster) { Monster.find_by(name: "Dustwing") }
+
+    it "creates a new monster" do
+      expect(monster).to_not be_nil
+    end
+
+    it "redirects to the monster's show page" do
+      expect(response).to redirect_to(monster_path(monster))
+    end
+  end
+end
+```
+
+You can use the `get` and `post` methods (along with `patch` and `delete`) to
+initiatiate test requests on the controller. A `response` object is available to
+set expectations on, like with `render_template` and `redirect_to`.
+
+The tests above are great, especially while we're still getting used to how
+controllers are wired. However, almost these exact tests could be copied for
+*any* controller set up according to Rails' RESTish conventions. There's nothing
+inherently wrong with that, but the redundance, along with the need to test
+views, inspired the creation of a new type of tests supported by Capybara known
+as "Feature Tests".
 
 
 # Feature Tests
 
+If you were going to write tests for a car's steering wheel, what would you
+start with?
+
+Here's one idea:
+
+> When the steering wheel is rotated to the left, the tires rotate to the left.
+
+This makes sense, but it's testing much more than the steering wheel. This test
+relies on the view (steering wheel), the model (tires), *and* the controller
+(steering column)!
+
+This is called an **acceptance test**, because it is phrased in terms of
+features that provide value to the user. (It could also be called an
+**integration test**, because it tests more than one pieces of the system as a
+group.)
+
+Can we *isolate* the steering wheel while still testing its functionality?
+
+Not really--the whole point of the steering wheel is to control the tires. We
+could talk about how it looks or what it's made of, but the functionality is
+inherently tied to the underlying system, just like the views in a Rails app.
+All of those forms and templates are meaningless without controllers and models
+to populate them.
+
+In the last section, we did our best to isolate the controller, and as a result,
+we wrote much of our tests in terms of the controller's internal parts (such as
+redirects and request methods). We don't care what the HTML looks like, or what
+button the user pressed, or how the models are behaving.
+
+This is called a **unit test**, because it tests a single unit of functionality.
+
+For a car, it might look like this:
+
+> When the steering column's flange rotates, the steering shaft transmits the
+> rotation to the steering box.
+
+Phew. Good thing they covered steering assemblies on the last episode of Car
+Talk, or I wouldn't have known where to start!
+
+By now you're probably realizing that if you say "steering" enough times, it
+stops sounding like a real word.
+
+But, more importantly, it can be difficult to write isolated **unit tests**, and
+it's not always clear whether they're useful: now that we have this test full of
+automotive jargon, compare it to this test, which covers the steering wheel
+(view) *and* the steering column (controller):
+
+> When the steering wheel is rotated to the left, the steering column transmits
+> the rotation to the steering box.
+
+This is a **feature test**.
+
+The **acceptance test** at the top of this section covers too much ground,
+making it brittle and difficult to maintain.
+
+The **unit test** in the middle of this section is so specific that it almost
+feels like we just rewrote the controller code, but phrased differently.
+
+The **feature test**, on the other hand, is Just Right. It lets us think like a
+user (in terms of the steering wheel, or view) while still making intelligent
+assertions about how the underlying system responds to input (in terms of the
+steering column, or controller).
+
+Now, on to the "how".
+
+
 ## Capybara
 
-"Feature" is a Capybara term. Features encompass views, and sometimes also
-controllers.
+When you see key words like `visit`, `fill_in`, and `page`, you know you're
+looking at a [Capybara][capybara] test.
 
-When you see key words like `visit`, `fill_in`, and `page`, you 
+[capybara]: https://github.com/jnicklas/capybara
 
+To set up Capybara, one must first install the gem:
+
+```ruby
+gem 'capybara'
+```
+
+Then setup Capybara-Rails integration in `spec/rails_helper.rb`:
+
+```ruby
+require 'capybara/rails'
+```
+
+Then setup Capybara-RSpec integration in `spec/spec_helper.rb`:
+
+```ruby
+require 'capybara/rspec'
+```
+
+Feature tests are traditionally located in `spec/features`, but you can put them
+anywhere if you pass the `:type => :feature` option to your `describe` call.
+
+To test our monster manager with Capybara, we'll start by setting up a GET
+request, then use Capybara's convenient helper functions to interact with the
+page just like a user would:
+
+```ruby
+# spec/features/monster_creation.rb
+
+describe "monster creation", type: :feature do
+  before do
+    visit new_monster_path
+    fill_in "Name", with: "Dustwing"
+    select "tiny", from: "monster_size"
+    fill_in "Taxonomy", with: "Abradacus Nonexistus"
+    click_button "Create Monster"
+  end
+```
+
+When `click_button` is called, this will trigger the POST request to the
+controller's `create` action, just as if a user clicked it in their browser.
+
+Now, we can write our original controller tests like usual:
+
+```ruby
+  let(:monster) { Monster.find_by(name: "Dustwing") }
+
+  it "creates a monster" do
+    expect(monster).to_not be_nil
+  end
+
+  it "redirects to the new monster's page" do
+    expect(current_path).to eq(monster_path(monster))
+  end
+```
+
+And because we're in Capybara land, we also have a very convenient way of making
+assertions about the final GET request:
+
+```ruby
+  it "displays the monster's name" do
+    within "h1" do
+      expect(page).to have_content(monster.name)
+    end
+  end
+```
+
+`within` sets the context for our next expectation, restricting it to the first
+`<h1>` tag encountered on the page. This way, our `expect` call will only pass
+if the specified content (`"Dustwing"`) appears inside that header.
+
+One interesting thing about this approach is that we're being much *less*
+explicit about certain expectations. For example, we're testing the redirect not
+by examining the initial `302` response. Instead, we're relying on Capybara's
+virtual "browser session" and examining the current path. This is much more
+powerful and intuitive, and it doesn't sacrifice much in the way of
+expressivity.
+
+
+# Summary
+
+The hardest part about testing usually ends up being the "why" and not the
+"how". Why write the test this way, and not that way?
+
+You will probably see Capybara feature tests in wider usage than direct
+controller and view tests, but they're not universal: if you're doing something
+unusual, like a series of complex redirects that change based on authorization
+level, it makes sense to write a more isolated controller test. But for standard
+CRUD functionality, Capybara is designed to save you a lot of time and mental
+effort.
+
+These can serve as fairly reliable guidelines:
+
+- Models should always be thoroughly unit tested.
+- Controllers should be as thin as possible to keep your feature tests simple.
+- If you can't avoid making a controller complex, it deserves its own isolated
+  test.
+- Capybara's syntax is much more powerful than Rails' builtin functionality for
+  view tests, so stick with it whenever possible.
+- Don't get carried away with the details when testing views: you just need to
+  make sure the information is in the right place. If your tests are too strict,
+  it will be impossible to make even simple tweaks to your templates without
+  breaking the build.
 
 <a href='https://learn.co/lessons/ruby-rails-testing' data-visibility='hidden'>View this lesson on Learn.co</a>
