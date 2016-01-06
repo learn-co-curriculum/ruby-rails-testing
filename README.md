@@ -1,319 +1,516 @@
-# Testing in Sinatra/Rails
+# Testing in Rails
 
-## Models
+One of the most fundamental aspects of programmer productivity is **the feedback
+loop**. "Scripting" languages like Ruby and Python are great for this, because
+you can run your code immediately after writing it, as opposed to lower-level
+languages like C, which must be compiled before being run.
 
-The model spec essentially tests the core building blocks of a Rails application, which in this case, refers to the model object. Having a well-tested application at the model level ensures that you have a big step towards a reliable code base.
+![Two programmers swordfight from their office chairs, using "Compiling!" as an
+excuse](http://imgs.xkcd.com/comics/compiling.png "Compiling!")
 
-A model spec tests specifically for three primary pieces of information:
-    * `create` method, when passed valid attributes, is valid 
-    * Validations fail when when passed invalid attributes
-    * Class and instance methods perform as expected
+## The Feedback Loop
 
-Let's go through an example of what validation tests could be written for a model:
+1. Decide what to do next
+1. Think of an approach
+1. Write some code
+1. Compile/run the code
+1. Observe the output
+  - If it looks good, move on to Step 1 for the next task.
+  - If there are problems, go back to Step 1 for this task.
+
+Having a short feedback loop--from brain to fingertips to running
+process--lowers the resistance for trying new things, and protects you from
+distractions that sneak in while you're waiting between steps.
+
+Unfortunately, there's more than one way to distract a programmer!
+
+## The Rails Feedback Loop
+
+1. Decide what to do next
+1. Read every related Rails Guide at least twice
+1. Spend an hour poring over StackOverflow answers from two major versions ago
+1. Copy-paste some sketchy-looking code
+1. Run the code, which immediately screws up your database
+1. Run `bundle exec rake db:reset`
+1. Get a migraine because you forgot to put your painstakingly-designed seed
+   data in `db/seeds.rb` and now it's all gone
+1. Go for a walk
+1. Write some code
+1. Refresh browser
+1. Scratch your head over why it says there's a missing template
+1. Spend another hour tweaking your new code until you realize you made a typo
+   in the filename and nothing you've been doing for the past three hours had a
+   chance of working in the first place
+1. Take a break to read *The Hitchhiker's Guide to Rails*:
+
+> *Rails is big. Really big. You just won't believe how vastly, hugely,
+> mind-bogglingly big it is. I mean, you may think it's a long way down the road
+> to the chemist, but that's just peanuts to Rails.*
+>
+> -- Douglas Adams
+
+(Okay, so maybe Mr. Adams was talking about space, but he totally *would have*
+said it this way if he was writing about web development instead of interstellar
+travel.)
+
+Rails ships with many features to save precious seconds in developer feedback
+loops, but there's no two ways about it: in anything but the most trivial app,
+it can be pretty complex to make sure your code is actually working correctly.
+
+In this lesson, we'll learn to shorten our feedback loop with different flavors
+of Rails tests, combining some standard approaches suggested in the Guides
+themselves with some more advanced practices that require additional
+dependencies (namely Capybara).
 
 
+# Objectives
+
+After this lesson, you should be able to...
+
+- List the different types of tests applicable to a Sinatra/Rails app.
+- Compare and contrast the different types of tests.
+- Describe the usage of Capybara in feature testing.
+
+
+# Three Test Types
+
+We'll be covering three types of tests:
+
+- **Models** (RSpec)
+- **Controllers** (RSpec)
+- **Features** (RSpec/Capybara)
+
+Features are the fanciest, so we'll leave them for last. They are preferred over
+regular Rails "View" tests.
+
+
+# RSpec
+
+By default, Rails uses `Test::Unit` for testing, which keeps its tests in the
+mysteriously-named `test/` folder.
+
+If you're planning from the start to use RSpec instead, you can tell Rails to
+skip `Test::Unit` by passing the `-T` flag to `rails new`, like so:
+
+```
+rails new cool_app -T
+```
+
+Then, you will add the gem to your Gemfile:
 
 ```ruby
-describe Contact do
-  it "is valid with a firstname, lastname and email" do
+gem 'rspec-rails'
+```
+
+And use the builtin generator to add a `spec` folder with the right boilerplate:
+
+```
+bundle install
+bundle exec rails g rspec:install
+```
+
+This is the Rails equivalent of the usual `rspec --init`.
+
+
+# An Automobile Analogy
+
+It's not enough to know *how* to test applications; we must also understand
+*why* it makes sense to test them in a certain way. To help with this, try
+thinking of Rails applications like cars:
+
+- **Models** are the **basic parts** that make cars useful, like the fuel tank,
+  engine, and tires.
+
+- **Views** are the **interactive parts** that the driver (user) can see and
+  touch, like the steering wheel, pedals, and gear shift.
+
+- **Controllers** are the rest of the **connecting parts** under the hood that
+  connect the views to the models, like how the steering column (along with the
+  rest of the steering assembly) connects the wheel to the tires. The users don't
+  really see them, think of them, or even necessarily know they exist, but they're
+  just as necessary.
+
+Models are not too difficult to test because they have very specific purposes
+that can be easily separated from the rest of the application.
+
+This holds true for cars as well: a good tire has a tread that grips the road in
+adverse conditions, doesn't puncture easily, and so on. You don't really need to
+think about the rest of the car when you're testing what makes a good wheel.
+
+This gets a little trickier for views and controllers, but we'll talk more about
+that once we're done with models.
+
+
+# Model Tests
+
+These go in `spec/models`, one file per model.
+
+Model tests use the least amount of special features, since all you really need
+is the model class itself. The most common usage for model tests is to make sure
+you have set up your validations correctly.
+
+Suppose we're working with this model:
+
+```ruby
+# app/models/monster.rb
+
+class Monster < ActiveRecord::Base
+  validates :name, presence: true
+  validates :size, inclusion: { in: ["tiny", "average", "like, REALLY big"] }
+  validates :taxonomy, format: { with: /\A[a-zA-Z]+ [a-zA-Z]+\z/,
+    message: "must include genus and species, like 'Homo Sapien'" }
+end
+```
+
+## Testing for Validity
+
+First, we'll make sure that it understands a valid Monster:
+
+```ruby
+# spec/models/monster_spec.rb
+
+describe Monster do
+  let(:attributes) do
+    {
+      name: "Dustwing",
+      size: "tiny",
+      taxonomy: "Abradacus Nonexistus"
+    }
   end
 
-  it "is invalid without a firstname" do 
-  end
-
-  it"is invalid without a lastname" do
-  end
-
-  it "is invalid without an email address" do
+  it "is considered valid" do
+    expect(Monster.new(attributes)).to be_valid
   end
 end
 ```
 
-These are blank boilerplate model tests. These are model validation RSpec tests. We're testing the data integrity and quality of the attributes of a `Contact` object. 
+Some questions to answer first:
 
-What is each test doing?
+### What is `let`?
 
-* Each line describes a **set of expectations**.
-* Each example expects only **one** thing.
-* Each example is **explicit**.
-* Each description begins with a **verb**, not `should`.
+If you haven't seen `let` before, it is a [standard helper method][rspec_let]
+that takes a symbol and a block. It runs the block **once per example** in which
+it is called, and saves the return value in a local variable named according to
+the symbol. This means you get a fresh copy in every test case.
 
-Let's write out the tests in the body.
+[rspec_let]: http://www.relishapp.com/rspec/rspec-core/docs/helper-methods/let-and-let
+
+### Why is `let` better than `before :each`?
+
+It's more fine-grained, which means you have better control over your data. It
+can be used in combination with `before` statements to set up your test data
+*just right* before the examples are run.
+
+### Why did we use `let` to make an attribute hash?
+
+We could have put the entire `Monster.new` call inside our `let` block, but
+using an attribute hash instead has some advantages:
+
+- If we want to tweak the data first, we can just pass `attributes.merge(name:
+  "Other")` while preserving the rest of the attributes.
+- We can also refer to `attributes` when making assertions about what the actual
+  object should look like.
+
+It's a good balance between saving keystrokes and maintaining flexibility over
+your test data.
+
+### Where does `be_valid` come from?
+
+RSpec provides plenty of builtin matchers, which you can peruse in their [API
+docs][rspec_api_matchers], but `be_valid` is conspicuously absent from the list.
+
+[rspec_api_matchers]: http://rspec.info/documentation/3.4/rspec-expectations/frames.html#!RSpec/Matchers.html
+
+This code uses a neat trick that RSpec refers to as "[predicate
+matchers][rspec_predicate]", and you'll see it **a lot** in Rails testing.
+
+In Ruby, it's conventional for methods that return `true` or `false` to be named
+with a question mark at the end. These methods are called **predicate methods**,
+because "predicate" is an English grammar term for the part of a sentence that
+makes a statement about the subject.
+
+[rspec_predicate]: https://www.relishapp.com/rspec/rspec-expectations/docs/built-in-matchers/predicate-matchers
+
+As you learned earlier in this unit, Rails provides a `valid?` method that
+returns `true` or `false` depending on whether the model object in question
+passed its validations.
+
+In RSpec, when you call a nonexistant matcher (such as `be_valid`), it strips
+off the `be_` (`valid`), adds a question mark (`valid?`), and checks to see if
+the object responds to a method by that name (`monster.valid?`).
+
+## Testing for Validation Failure
+
+Now, let's add some tests to make sure our validations are working in the
+opposite direction:
 
 ```ruby
-describe Contact do
-  it "is valid with a firstname, lastname and email" do
-    expect(Contact.new(firstname: "Josh", lastname: "Owens", email: "josh@flatironschool.com")).to be_valid
+# spec/models/monster.rb
+
+  let(:missing_name) { attributes.except(:name) }
+  let(:invalid_size) { attributes.merge(size: "not that big") }
+  let(:missing_species) { attributes.merge(taxonomy: "Abradacus") }
+
+  it "is invalid without a name" do
+    expect(Monster.new(missing_name)).not_to be_valid
   end
 
-  it "is invalid without a firstname" do 
-    expect(Contact.new(firstname: nil)).to have(1).errors_on(:firstname)
+  it "is invalid with an unusual size" do
+    expect(Monster.new(invalid_size)).not_to be_valid
   end
 
-  it"is invalid without a lastname"do
-    expect(Contact.new(lastname: nil)).to have(1).errors_on(:lastname)
+  it "is invalid with a missing species" do
+    expect(Monster.new(missing_species)).not_to be_valid
+  end
+```
+
+Note that each of these `let` blocks rely on the first one, `attributes`, which
+contains all of our valid attributes. `missing_name` uses the Rails Hash helper
+`except` to exclude the `name`, while the other two use the Ruby standard
+`merge` to overwrite valid attributes with invalid ones.
+
+## I saw some search results using `should`. What is that?
+
+`should` is an older RSpec syntax that has been deprecated in favor of `expect`.
+
+## Any other RSpec features to know about?
+
+Several RSpec features have been moved over time into the
+[rspec-collection_matchers][collection_matchers] gem, which can make some
+detailed assertions more readable.
+
+[collection_matchers]: https://github.com/rspec/rspec-collection_matchers
+
+
+# Controller Tests
+
+The biggest risk in writing controller tests is redundancy: controllers exists
+to connect views and models, so it's difficult to test them in isolation.
+
+First, we'll go over **how** to write controller tests, then our discussion of
+the **why** will bring us into the final subject of "feature tests".
+
+```ruby
+# spec/controllers/monsters_controller_spec.rb
+
+describe MonstersController, type: :controller do
+  let(:attributes) do
+    {
+      name: "Dustwing",
+      size: "tiny",
+      taxonomy: "Abradacus Nonexistus"
+    }
   end
 
-  it "is invalid without an email address" do
-    expect(Contact.new(email: nil)).to have(1).errors_on(:email)
+  it "renders the show template" do
+    monster = Monster.create!(attributes)
+    get :show, id: monster.id
+    expect(response).to render_template(:show)
   end
-end
-```
 
-Let's write out a test for the following instance method on the `Contact` model:
+  describe "creation" do
+    before { post :create, monster: attributes }
+    let(:monster) { Monster.find_by(name: "Dustwing") }
 
-```ruby
-def name
-  [firstname, lastname].join(' ')
-end
-```
-
-We have a `name` method that puts the `firstname` and `lastname` attributes into an array, and then joins them into a string. Let's write the description out below.
-
-```ruby
-it"returns a contact's full name as a string" do
-  ...
-end
-```
-
-And here's the final spec.
-
-```ruby
-it"returns a contact's full name as a string" do
-  contact = Contact.new(firstname: 'Josh', lastname: 'Owens',
-    email: 'josh@flatironschool.com.com')
-  expect(contact.name).to eq 'Josh Owens'
-end
-```
-
-What's an example of a happy versus a sad path for a model test? Look at the descriptions for the test below.
-
-```ruby
-describe Contact do
-  # validation examples ...
-  describe "filter last name by letter" do 
-    context "matching letters" do
-      # matching examples ...
+    it "creates a new monster" do
+      expect(monster).to_not be_nil
     end
 
-    context "non-matching letters" do 
-      # non-matching examples ...
-￼￼  end
-  end
-end
-```
-
-Now let's write out the tests.
-
-```ruby
-describe Contact do
-  before :each do
-    @smith = Contact.create(firstname: 'John', lastname: 'Smith',
-    email: 'jsmith@example.com')
-    @jones = Contact.create(firstname: 'Tim', lastname: 'Jones',
-    email: 'tjones@example.com')
-    @johnson = Contact.create(firstname: 'John', lastname: 'Johnson',
-    email: 'jjohnson@example.com')
-  end
-
-  context "matching letters" do
-    it "returns a sorted array of results that match" do
-      expect(Contact.by_letter("J")).to eq [@johnson, @jones]
-    end
-  end
-
-  context "non-matching letters" do
-    it "returns a sorted array of results that match" do
-      expect(Contact.by_letter("J")).to_not include @smith
+    it "redirects to the monster's show page" do
+      expect(response).to redirect_to(monster_path(monster))
     end
   end
 end
 ```
 
-These tests are testing both the happy path (matching letters) and the sad path (non-matching letters).
+You can use the `get` and `post` methods (along with `patch` and `delete`) to
+initiatiate test requests on the controller. A `response` object is available to
+set expectations on, like with `render_template` and `redirect_to`.
 
-## Controllers and Feature Tests
+The tests above are great, especially while we're still getting used to how
+controllers are wired. However, almost these exact tests could be copied for
+*any* controller set up according to Rails' RESTish conventions. There's nothing
+inherently wrong with that, but the redundance, along with the need to test
+views, inspired the creation of a new type of tests supported by Capybara known
+as "Feature Tests".
 
-Testing controllers, in my opinion, is probably the hardest aspect of testing. Why is this? This is because there's so much you can do with controller tests, and it becomes more of a question of, *what should I test*?. There are two ways of testing controllers: via explicit controller tests, and also via feature tests.
 
-Why should we test controllers? They're also classes with methods, and should be on equal footing with your Rails models too. The controller tests can be written more quickly than feature tests, and is much more straightforward than a feature test. The final benefit is that they run more quickly than feature tests, because feature tests typically interact with a headless browser via Selenium Webdriver (or another engine for Capybara).
+# Feature Tests
 
-Why should we not test controllers? Controllers should be skinny (fat models, skinny controllers). A feature test can achieve the results of multiple controller tests. It could potentially be easier to write and maintain a feature spec.
+If you were going to write tests for a car's steering wheel, what would you
+start with?
 
-It's a good practice to do a mix of both. I like to use controller tests for the low-level process of a controller method, and then use a feature test to test the full end-to-end interaction of our controllers with the models, the views, and the database.
+Here's one idea:
 
-### Controllers
+> When the steering wheel is rotated to the left, the tires rotate to the left.
 
-We'll review simple examples of controller tests in this section.
+This makes sense, but it's testing much more than the steering wheel. This test
+relies on the view (steering wheel), the model (tires), *and* the controller
+(steering column)!
 
-#### `GET` Requests
+This is called an **acceptance test**, because it is phrased in terms of
+features that provide value to the user. (It could also be called an
+**integration test**, because it tests more than one pieces of the system as a
+group.)
 
-The simplest controller test involves the `GET` request. In Rails, there are four standard actions involving this: `index`, `show`, `edit`, and `new`. Let's do an example for the `show` action.
+Can we *isolate* the steering wheel while still testing its functionality?
+
+Not really--the whole point of the steering wheel is to control the tires. We
+could talk about how it looks or what it's made of, but the functionality is
+inherently tied to the underlying system, just like the views in a Rails app.
+All of those forms and templates are meaningless without controllers and models
+to populate them.
+
+In the last section, we did our best to isolate the controller, and as a result,
+we wrote much of our tests in terms of the controller's internal parts (such as
+redirects and request methods). We don't care what the HTML looks like, or what
+button the user pressed, or how the models are behaving.
+
+This is called a **unit test**, because it tests a single unit of functionality.
+
+For a car, it might look like this:
+
+> When the steering column's flange rotates, the steering shaft transmits the
+> rotation to the steering box.
+
+Phew. Good thing they covered steering assemblies on the last episode of Car
+Talk, or I wouldn't have known where to start!
+
+By now you're probably realizing that if you say "steering" enough times, it
+stops sounding like a real word.
+
+But, more importantly, it can be difficult to write isolated **unit tests**, and
+it's not always clear whether they're useful: now that we have this test full of
+automotive jargon, compare it to this test, which covers the steering wheel
+(view) *and* the steering column (controller):
+
+> When the steering wheel is rotated to the left, the steering column transmits
+> the rotation to the steering box.
+
+This is a **feature test**.
+
+The **acceptance test** at the top of this section covers too much ground,
+making it brittle and difficult to maintain.
+
+The **unit test** in the middle of this section is so specific that it almost
+feels like we just rewrote the controller code, but phrased differently.
+
+The **feature test**, on the other hand, is Just Right. It lets us think like a
+user (in terms of the steering wheel, or view) while still making intelligent
+assertions about how the underlying system responds to input (in terms of the
+steering column, or controller).
+
+Now, on to the "how".
+
+
+## Capybara
+
+When you see key words like `visit`, `fill_in`, and `page`, you know you're
+looking at a [Capybara][capybara] test.
+
+[capybara]: https://github.com/jnicklas/capybara
+
+To set up Capybara, one must first install the gem:
 
 ```ruby
-describe'GET#show'do
-  before(:each) do
-    contact = create(:contact)
-  end
-
-  it "assigns the requested contact to @contact" do
-    get :show, id: contact
-    expect(assigns(:contact)).to eq contact
-  end
-  
-  it "renders the :show template" do
-    get :show, id: contact
-    expect(response).to render_template :show
-  end 
-end
+gem 'capybara'
 ```
 
-In this example, we're creating a `Contact` object using the FactoryGirl gem. 
-
-In the first test, we send a get request to the `show` template, and we've passed in the `id` attribute of the contact object. We then set up the expectation that the instance variable `@contact` in the controller show action is the same as the contact object that we created. 
-
-In the second test, we send a get request to the 'show' template again, passing in the `id` attribute of the contact object. Then we set up the expectation that the response actually renders the `show` template (contacts/show.html.erb).
-
-Each test should have just one expectation (unless it's a feature test).
-
-#### `POST` Requests
+Then setup Capybara-Rails integration in `spec/rails_helper.rb`:
 
 ```ruby
-describe "POST #create" do
-  before(:each) do
-   @phones = [
-      attributes_for(:phone),
-      attributes_for(:phone),
-      attributes_for(:phone)
+require 'capybara/rails'
+```
+
+Then setup Capybara-RSpec integration in `spec/spec_helper.rb`:
+
+```ruby
+require 'capybara/rspec'
+```
+
+Feature tests are traditionally located in `spec/features`, but you can put them
+anywhere if you pass the `:type => :feature` option to your `describe` call.
+
+To test our monster manager with Capybara, we'll start by setting up a GET
+request, then use Capybara's convenient helper functions to interact with the
+page just like a user would:
+
+```ruby
+# spec/features/monster_creation.rb
+
+describe "monster creation", type: :feature do
+  before do
+    visit new_monster_path
+    fill_in "Name", with: "Dustwing"
+    select "tiny", from: "monster_size"
+    fill_in "Taxonomy", with: "Abradacus Nonexistus"
+    click_button "Create Monster"
+  end
+```
+
+When `click_button` is called, this will trigger the POST request to the
+controller's `create` action, just as if a user clicked it in their browser.
+
+Now, we can write our original controller tests like usual:
+
+```ruby
+  let(:monster) { Monster.find_by(name: "Dustwing") }
+
+  it "creates a monster" do
+    expect(monster).to_not be_nil
   end
 
-  context "with valid attributes" do
-    it "saves the new contact in the database" do
-      expect{
-        post :create, contact: attributes_for(:contact,
-          phones_attributes: @phones)
-      }.to change(Contact, :count).by(1)
+  it "redirects to the new monster's page" do
+    expect(current_path).to eq(monster_path(monster))
+  end
+```
+
+And because we're in Capybara land, we also have a very convenient way of making
+assertions about the final GET request:
+
+```ruby
+  it "displays the monster's name" do
+    within "h1" do
+      expect(page).to have_content(monster.name)
     end
-  
-    it "redirects to contacts#show" do
-      post :create, contact: attributes_for(:contact,
-            phones_attributes: @phones)
-      expect(response).to redirect_to contact_path(assigns[:contact])
-    end 
   end
-end
 ```
 
-In a controller test for a `POST` request (which happens for the `create` action), we're interested in sending our form parameters to the `create` action, and then making sure that the controller handles that data properly.
+`within` sets the context for our next expectation, restricting it to the first
+`<h1>` tag encountered on the page. This way, our `expect` call will only pass
+if the specified content (`"Dustwing"`) appears inside that header.
 
-In the first test, we've sent a post request to the `create` action, and we've sent along a contact object with nested attributes (for phone numbers). We're expecting that the POST request should increase the total number of Contact objects in the database by 1.
+One interesting thing about this approach is that we're being much *less*
+explicit about certain expectations. For example, we're testing the redirect not
+by examining the initial `302` response. Instead, we're relying on Capybara's
+virtual "browser session" and examining the current path. This is much more
+powerful and intuitive, and it doesn't sacrifice much in the way of
+expressivity.
 
-Then in the second test, we're testing that a successful form submission will redirect the user to the show page for the new Contact object. We're expecting that the response from the POST request will redirect to the contact show page for the newly created Contact object.
 
-#### `PATCH` Requests
+# Summary
 
-```ruby
-describe 'PATCH#update' do 
-  before :each do
-    @contact = create(:contact,
-      firstname: 'Lawrence', lastname: 'Smith')
-  end
-  
-  context "valid attributes" do
-    it "located the requested @contact" do
-      patch :update, id: @contact, contact: attributes_for(:contact)
-      expect(assigns(:contact)).to eq(@contact) 
-    end
+The hardest part about testing usually ends up being the "why" and not the
+"how". Why write the test this way, and not that way?
 
-    it "changes @contact's attributes" do
-      patch :update, id: @contact,
-        contact: attributes_for(:contact,
-          firstname: "Larry", lastname: "Smith")
-      @contact.reload
-      expect(@contact.firstname).to eq("Larry")
-      expect(@contact.lastname).to eq("Smith")
-    end
-  end
-end
-```
+You will probably see Capybara feature tests in wider usage than direct
+controller and view tests, but they're not universal: if you're doing something
+unusual, like a series of complex redirects that change based on authorization
+level, it makes sense to write a more isolated controller test. But for standard
+CRUD functionality, Capybara is designed to save you a lot of time and mental
+effort.
 
-The controller test for a `PATCH` request is similar to the one for the `POST` request, except that this is for an `update` action instead of a `create`. It is updating a currently existing record in the database.
+These can serve as fairly reliable guidelines:
 
-The first test is about locating the correct Contact object. When a PATCH request is sent for a specific Contact object, `@contact`, we're checking to make sure that the updated object is, in fact, the correct Contact object.
-
-The second test is about ensuring that the attributes of the correct Contact object were changed. The `@contact` object's attributes are as follows: `firstname` is Lawrence, and `lastname` is Smith. We're sending a PATCH request that updates the `firstname` attribute to Larry. Once the PATCH request is sent to the server, we have to reload the `@contact` object, since it has not been loaded since the PATCH request was sent. Once we reload it, then we can run the expectations to check if `firstname` has, in fact, been updated. 
-
-#### `DELETE` Requests
-
-```ruby
-describe 'DELETE #destroy' do
-  before(:each) do
-    @contact = create(:contact)
-  end
-  
-  it "deletes the contact" do expect{
-    delete :destroy, id: @contact
-    }.to change(Contact,:count).by(-1)
-  end
-  
-  it "redirects to contacts#index" do
-    delete :destroy, id: @contact
-    expect(response).to redirect_to contacts_url
-  end
-end
-```
-
-We've set up a Contact object, `@contact`, to be created before each test runs. 
-
-On the first test, we send a `DELETE` request for `@contact`, and we've set up an expectation that the `#count` method on the `Contact` class should be changed by one. If it doesn't change accordingly, then the `DELETE` action hasn't been set up properly.
-
-On the second test, we send the same `DELETE` request as in the first test. The only difference is the expectation. We're expecting that, on successful deletion of the `@contact` object, we should be redirected to the `contacts_url` path.
-
-### Features
-
-A feature test is dependent on Capybara, which uses the browser to interact with your application. Let's do a simple example of a user logging in. 
-
-```ruby
-feature 'User management' do
-  scenario "adds a new user" do
-    admin = create(:admin)
-    visit root_path
-    click_link 'Log In'
-    fill_in 'Email', with: admin.email
-    fill_in 'Password', with: admin.password
-    click_button 'Log In'
-    visit root_path
-    
-    expect{
-      click_link 'Users'
-      click_link 'New User'
-      fill_in 'Email', with: 'newuser@example.com'
-      find('#password').fill_in 'Password', with: 'secret123'
-      find('#password_confirmation').fill_in 'Password confirmation',
-        with: 'secret123'
-    click_button 'Create User'
-    }.to change(User, :count).by(1)
-    expect(current_path).to eq users_path
-    expect(page).to have_content 'New user created'
-    within 'h1' do
-      expect(page).to have_content 'Users'
-    end
-    expect(page).to have_content 'newuser@example.com'
-  end
-end
-```
-
-This is a full-fledged feature test for adding a new user. Instead of a controller unit test, which is specifically testing a controller action, this is testing page interactions, and expecting a certain outcome based on those interactions.
-
-We have a feature called `User Management`. Inside of each feature, we account for scenarios in which a user would interact with a page. For example, on a user registration page, a user might log in correctly, or log in incorrectly. This would represent two separate scenarios, and we want to test to make sure that each scenario results in the correct response from the application. If a user logs in correctly, the user should expect to see their profile page, or something that shows that they've logged in. If a user fails to log in correctly, then they should not be logged in, and they should have an error message that says that their attempt to log in was unsuccessful.
-
-Following each of the scenarios, we set up the expectation. This is the component of the test that's checking to see if the scenario has executed correctly according to the test's specifications.
-
-## Resources
-
-* [RSpec](http://rspec.info) - [Documentation](http://rspec.info/documentation/)
-* [Github](http://www.github.com/) - [Rspec Rails Examples](https://github.com/eliotsykes/rspec-rails-examples)
-* [Flatiron School Books](http://books.flatironschool.com/) - [Everyday Rails Testing with RSpec](http://books.flatironschool.com/books/114)
-
+- Models should always be thoroughly unit tested.
+- Controllers should be as thin as possible to keep your feature tests simple.
+- If you can't avoid making a controller complex, it deserves its own isolated
+  test.
+- Capybara's syntax is much more powerful than Rails' builtin functionality for
+  view tests, so stick with it whenever possible.
+- Don't get carried away with the details when testing views: you just need to
+  make sure the information is in the right place. If your tests are too strict,
+  it will be impossible to make even simple tweaks to your templates without
+  breaking the build.
 
 <a href='https://learn.co/lessons/ruby-rails-testing' data-visibility='hidden'>View this lesson on Learn.co</a>
