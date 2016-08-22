@@ -1,9 +1,9 @@
 # Testing in Rails
 
 One of the most fundamental aspects of programmer productivity is **the feedback
-loop**. "Scripting" languages like Ruby and Python are great for this, because
-you can run your code immediately after writing it, as opposed to lower-level
-languages like C, which must be compiled before being run.
+loop**. "Scripting" languages like Ruby and Python are great for this because
+you can run your code immediately after writing it. Conversely, lower-level
+languages like C must be compiled before being run.
 
 ![Two programmers swordfight from their office chairs, using "Compiling!" as an
 excuse](http://imgs.xkcd.com/comics/compiling.png "Compiling!")
@@ -11,15 +11,15 @@ excuse](http://imgs.xkcd.com/comics/compiling.png "Compiling!")
 ## The Feedback Loop
 
 1. Decide what to do next
-1. Think of an approach
-1. Write some code
-1. Compile/run the code
-1. Observe the output
+2. Think of an approach
+3. Write some code
+4. Compile/run the code
+5. Observe the output
   - If it looks good, move on to Step 1 for the next task.
   - If there are problems, go back to Step 1 for this task.
 
-Having a short feedback loop--from brain to fingertips to running
-process--lowers the resistance for trying new things, and protects you from
+Having a short feedback loop –– from brain to fingertips to running
+process –– lowers the resistance for trying new things and protects you from
 distractions that sneak in while you're waiting between steps.
 
 Unfortunately, there's more than one way to distract a programmer!
@@ -27,21 +27,21 @@ Unfortunately, there's more than one way to distract a programmer!
 ## The Rails Feedback Loop
 
 1. Decide what to do next
-1. Read every related Rails Guide at least twice
-1. Spend an hour poring over StackOverflow answers from two major versions ago
-1. Copy-paste some sketchy-looking code
-1. Run the code, which immediately screws up your database
-1. Run `bundle exec rake db:reset`
-1. Get a migraine because you forgot to put your painstakingly-designed seed
-   data in `db/seeds.rb` and now it's all gone
-1. Go for a walk
-1. Write some code
-1. Refresh browser
-1. Scratch your head over why it says there's a missing template
-1. Spend another hour tweaking your new code until you realize you made a typo
+2. Read every related Rails Guide at least twice
+3. Spend an hour poring over StackOverflow answers from two major versions ago
+4. Copy-paste some sketchy-looking code
+5. Run the code, which immediately screws up your database
+6. Run `bundle exec rake db:reset`
+7. Get a migraine because you forgot to put your painstakingly-designed seed
+   data in `db/seeds.rb`, and now it's all gone
+8. Go for a walk
+9. Write some code
+10. Refresh browser
+11. Scratch your head over why it says there's a missing template
+12. Spend another hour tweaking your new code until you realize you made a typo
    in the filename and nothing you've been doing for the past three hours had a
    chance of working in the first place
-1. Take a break to read *The Hitchhiker's Guide to Rails*:
+13. Take a break to read *The Hitchhiker's Guide to Rails*:
 
 > *Rails is big. Really big. You just won't believe how vastly, hugely,
 > mind-bogglingly big it is. I mean, you may think it's a long way down the road
@@ -50,7 +50,7 @@ Unfortunately, there's more than one way to distract a programmer!
 > -- Douglas Adams
 
 (Okay, so maybe Mr. Adams was talking about space, but he totally *would have*
-said it this way if he was writing about web development instead of interstellar
+said it this way if he'd been writing about web development instead of interstellar
 travel.)
 
 Rails ships with many features to save precious seconds in developer feedback
@@ -102,7 +102,7 @@ Then, you will add the gem to your Gemfile:
 gem 'rspec-rails'
 ```
 
-And use the builtin generator to add a `spec` folder with the right boilerplate:
+And use the built-in generator to add a `spec` folder with the right boilerplate:
 
 ```
 bundle install
@@ -157,8 +157,8 @@ Suppose we're working with this model:
 class Monster < ActiveRecord::Base
   validates :name, presence: true
   validates :size, inclusion: { in: ["tiny", "average", "like, REALLY big"] }
-  validates :taxonomy, format: { with: /\A[a-zA-Z]+ [a-zA-Z]+\z/,
-    message: "must include genus and species, like 'Homo Sapien'" }
+  validates :taxonomy, format: { with: /\A[A-Z](\.|[a-z]+) [a-z]{2,}\z/,
+    message: "must include genus and species, like 'Homo sapiens'" }
 end
 ```
 
@@ -174,7 +174,7 @@ describe Monster do
     {
       name: "Dustwing",
       size: "tiny",
-      taxonomy: "Abradacus Nonexistus"
+      taxonomy: "Abradacus nonexistus"
     }
   end
 
@@ -188,12 +188,10 @@ Some questions to answer first:
 
 ### What is `let`?
 
-If you haven't seen `let` before, it is a [standard helper method][rspec_let]
+If you haven't seen `let` before, it is a [standard helper method](http://www.relishapp.com/rspec/rspec-core/docs/helper-methods/let-and-let)
 that takes a symbol and a block. It runs the block **once per example** in which
-it is called, and saves the return value in a local variable named according to
+it is called and saves the return value in a local variable named according to
 the symbol. This means you get a fresh copy in every test case.
-
-[rspec_let]: http://www.relishapp.com/rspec/rspec-core/docs/helper-methods/let-and-let
 
 ### Why is `let` better than `before :each`?
 
@@ -211,31 +209,27 @@ using an attribute hash instead has some advantages:
 - We can also refer to `attributes` when making assertions about what the actual
   object should look like.
 
-It's a good balance between saving keystrokes and maintaining flexibility over
+It's a good balance between saving keystrokes and maintaining the flexibility of
 your test data.
 
 ### Where does `be_valid` come from?
 
-RSpec provides plenty of builtin matchers, which you can peruse in their [API
-docs][rspec_api_matchers], but `be_valid` is conspicuously absent from the list.
-
-[rspec_api_matchers]: http://rspec.info/documentation/3.4/rspec-expectations/frames.html#!RSpec/Matchers.html
+RSpec provides plenty of built-in matchers, which you can peruse in their [API
+docs](http://rspec.info/documentation/3.4/rspec-expectations/frames.html#!RSpec/Matchers.html), but `be_valid` is conspicuously absent from the list.
 
 This code uses a neat trick that RSpec refers to as "[predicate
-matchers][rspec_predicate]", and you'll see it **a lot** in Rails testing.
+matchers](https://www.relishapp.com/rspec/rspec-expectations/docs/built-in-matchers/predicate-matchers)", and you'll see it **a lot** in Rails testing.
 
 In Ruby, it's conventional for methods that return `true` or `false` to be named
 with a question mark at the end. These methods are called **predicate methods**,
 because "predicate" is an English grammar term for the part of a sentence that
 makes a statement about the subject.
 
-[rspec_predicate]: https://www.relishapp.com/rspec/rspec-expectations/docs/built-in-matchers/predicate-matchers
-
 As you learned earlier in this unit, Rails provides a `valid?` method that
 returns `true` or `false` depending on whether the model object in question
 passed its validations.
 
-In RSpec, when you call a nonexistant matcher (such as `be_valid`), it strips
+In RSpec, when you call a nonexistent matcher (such as `be_valid`), it strips
 off the `be_` (`valid`), adds a question mark (`valid?`), and checks to see if
 the object responds to a method by that name (`monster.valid?`).
 
@@ -265,9 +259,9 @@ opposite direction:
 ```
 
 Note that each of these `let` blocks rely on the first one, `attributes`, which
-contains all of our valid attributes. `missing_name` uses the Rails Hash helper
-`except` to exclude the `name`, while the other two use the Ruby standard
-`merge` to overwrite valid attributes with invalid ones.
+contains all of our valid attributes. `missing_name` uses the Rails hash helper
+`except` to exclude the `name` key while the other two use the standard Ruby
+`merge` method to overwrite valid attributes with invalid ones.
 
 ## I saw some search results using `should`. What is that?
 
@@ -276,19 +270,17 @@ contains all of our valid attributes. `missing_name` uses the Rails Hash helper
 ## Any other RSpec features to know about?
 
 Several RSpec features have been moved over time into the
-[rspec-collection_matchers][collection_matchers] gem, which can make some
+[rspec-collection_matchers](https://github.com/rspec/rspec-collection_matchers) gem, which can make some
 detailed assertions more readable.
-
-[collection_matchers]: https://github.com/rspec/rspec-collection_matchers
 
 
 # Controller Tests
 
-The biggest risk in writing controller tests is redundancy: controllers exists
+The biggest risk in writing controller tests is redundancy: controllers exist
 to connect views and models, so it's difficult to test them in isolation.
 
-First, we'll go over **how** to write controller tests, then our discussion of
-the **why** will bring us into the final subject of "feature tests".
+First, we'll go over **how** to write controller tests. Then, our discussion of
+the **why** will bring us into the final subject, "feature tests".
 
 ```ruby
 # spec/controllers/monsters_controller_spec.rb
@@ -298,7 +290,7 @@ describe MonstersController, type: :controller do
     {
       name: "Dustwing",
       size: "tiny",
-      taxonomy: "Abradacus Nonexistus"
+      taxonomy: "Abradacus nonexistus"
     }
   end
 
@@ -324,15 +316,15 @@ end
 ```
 
 You can use the `get` and `post` methods (along with `patch` and `delete`) to
-initiatiate test requests on the controller. A `response` object is available to
-set expectations on, like with `render_template` and `redirect_to`.
+initiate test requests on the controller. A `response` object is available to
+set expectations on, such as `render_template` or `redirect_to`.
 
 The tests above are great, especially while we're still getting used to how
 controllers are wired. However, almost these exact tests could be copied for
 *any* controller set up according to Rails' RESTish conventions. There's nothing
 inherently wrong with that, but the redundance, along with the need to test
-views, inspired the creation of a new type of tests supported by Capybara known
-as "Feature Tests".
+views, inspired the creation of a new type of test supported by Capybara known
+as a "Feature Test".
 
 
 # Feature Tests
@@ -348,22 +340,22 @@ This makes sense, but it's testing much more than the steering wheel. This test
 relies on the view (steering wheel), the model (tires), *and* the controller
 (steering column)!
 
-This is called an **acceptance test**, because it is phrased in terms of
+This is called an **acceptance test** because it is phrased in terms of
 features that provide value to the user. (It could also be called an
-**integration test**, because it tests more than one pieces of the system as a
-group.)
+**integration test** because it tests more than one piece of the system at
+once.)
 
 Can we *isolate* the steering wheel while still testing its functionality?
 
-Not really--the whole point of the steering wheel is to control the tires. We
+Not really –– the whole point of the steering wheel is to control the tires. We
 could talk about how it looks or what it's made of, but the functionality is
 inherently tied to the underlying system, just like the views in a Rails app.
 All of those forms and templates are meaningless without controllers and models
 to populate them.
 
-In the last section, we did our best to isolate the controller, and as a result,
-we wrote much of our tests in terms of the controller's internal parts (such as
-redirects and request methods). We don't care what the HTML looks like, or what
+In the last section, we did our best to isolate the controller, and, as a result,
+we wrote many of our tests in terms of the controller's internal parts (such as
+redirects and request methods). We don't care what the HTML looks like, what
 button the user pressed, or how the models are behaving.
 
 This is called a **unit test**, because it tests a single unit of functionality.
@@ -380,9 +372,9 @@ By now you're probably realizing that if you say "steering" enough times, it
 stops sounding like a real word.
 
 But, more importantly, it can be difficult to write isolated **unit tests**, and
-it's not always clear whether they're useful: now that we have this test full of
-automotive jargon, compare it to this test, which covers the steering wheel
-(view) *and* the steering column (controller):
+it's not always clear whether they're useful. Compare the jargon-heavy, extremely
+specific unit test, above, to this test covering the steering wheel
+(view) *and* steering column (controller):
 
 > When the steering wheel is rotated to the left, the steering column transmits
 > the rotation to the steering box.
@@ -393,36 +385,34 @@ The **acceptance test** at the top of this section covers too much ground,
 making it brittle and difficult to maintain.
 
 The **unit test** in the middle of this section is so specific that it almost
-feels like we just rewrote the controller code, but phrased differently.
+feels like we just rewrote the controller code with different phrasing.
 
 The **feature test**, on the other hand, is Just Right. It lets us think like a
 user (in terms of the steering wheel, or view) while still making intelligent
-assertions about how the underlying system responds to input (in terms of the
-steering column, or controller).
+assertions about how the underlying system should respond to input (in terms of
+the steering column, or controller).
 
-Now, on to the "how".
+Now, on to the *how*.
 
 
 ## Capybara
 
 When you see key words like `visit`, `fill_in`, and `page`, you know you're
-looking at a [Capybara][capybara] test.
+looking at a [Capybara](https://github.com/jnicklas/capybara) test.
 
-[capybara]: https://github.com/jnicklas/capybara
+To set up Capybara, one must first add the gem to the `Gemfile`:
 
-To set up Capybara, one must first install the gem:
-
-```ruby
+```
 gem 'capybara'
 ```
 
-Then setup Capybara-Rails integration in `spec/rails_helper.rb`:
+Then set up Capybara-Rails integration in `spec/rails_helper.rb`:
 
 ```ruby
 require 'capybara/rails'
 ```
 
-Then setup Capybara-RSpec integration in `spec/spec_helper.rb`:
+Then set up Capybara-RSpec integration in `spec/spec_helper.rb`:
 
 ```ruby
 require 'capybara/rspec'
@@ -431,8 +421,8 @@ require 'capybara/rspec'
 Feature tests are traditionally located in `spec/features`, but you can put them
 anywhere if you pass the `:type => :feature` option to your `describe` call.
 
-To test our monster manager with Capybara, we'll start by setting up a GET
-request, then use Capybara's convenient helper functions to interact with the
+To test our monster manager with Capybara, we'll start by setting up a `GET`
+request and then use Capybara's convenient helper functions to interact with the
 page just like a user would:
 
 ```ruby
@@ -443,13 +433,13 @@ describe "monster creation", type: :feature do
     visit new_monster_path
     fill_in "Name", with: "Dustwing"
     select "tiny", from: "monster_size"
-    fill_in "Taxonomy", with: "Abradacus Nonexistus"
+    fill_in "Taxonomy", with: "Abradacus nonexistus"
     click_button "Create Monster"
   end
 ```
 
-When `click_button` is called, this will trigger the POST request to the
-controller's `create` action, just as if a user clicked it in their browser.
+When `click_button` is called, this will trigger the `POST` request to the
+controller's `create` action, just as if a user had clicked it in their browser.
 
 Now, we can write our original controller tests like usual:
 
@@ -466,7 +456,7 @@ Now, we can write our original controller tests like usual:
 ```
 
 And because we're in Capybara land, we also have a very convenient way of making
-assertions about the final GET request:
+assertions about the final `GET` request:
 
 ```ruby
   it "displays the monster's name" do
@@ -478,23 +468,22 @@ assertions about the final GET request:
 
 `within` sets the context for our next expectation, restricting it to the first
 `<h1>` tag encountered on the page. This way, our `expect` call will only pass
-if the specified content (`"Dustwing"`) appears inside that header.
+if the specified content (`"Dustwing"`) appears inside that first heading.
 
 One interesting thing about this approach is that we're being much *less*
 explicit about certain expectations. For example, we're testing the redirect not
-by examining the initial `302` response. Instead, we're relying on Capybara's
-virtual "browser session" and examining the current path. This is much more
-powerful and intuitive, and it doesn't sacrifice much in the way of
-expressivity.
+with the initial `302` response but instead by examining the current path in
+Capybara's virtual "browser session". This is much more powerful and intuitive,
+and it doesn't sacrifice much in the way of expressivity.
 
 
 # Summary
 
 The hardest part about testing usually ends up being the "why" and not the
-"how". Why write the test this way, and not that way?
+"how". Why write the test this way and not that way?
 
 You will probably see Capybara feature tests in wider usage than direct
-controller and view tests, but they're not universal: if you're doing something
+controller and view tests, but they're not universal. If you're doing something
 unusual, like a series of complex redirects that change based on authorization
 level, it makes sense to write a more isolated controller test. But for standard
 CRUD functionality, Capybara is designed to save you a lot of time and mental
@@ -506,7 +495,7 @@ These can serve as fairly reliable guidelines:
 - Controllers should be as thin as possible to keep your feature tests simple.
 - If you can't avoid making a controller complex, it deserves its own isolated
   test.
-- Capybara's syntax is much more powerful than Rails' builtin functionality for
+- Capybara's syntax is much more powerful than Rails's built-in functionality for
   view tests, so stick with it whenever possible.
 - Don't get carried away with the details when testing views: you just need to
   make sure the information is in the right place. If your tests are too strict,
