@@ -239,7 +239,7 @@ Now, let's add some tests to make sure our validations are working in the
 opposite direction:
 
 ```ruby
-# spec/models/monster.rb
+# spec/models/monster_spec.rb
 
   let(:missing_name) { attributes.except(:name) }
   let(:invalid_size) { attributes.merge(size: "not that big") }
