@@ -501,5 +501,3 @@ These can serve as fairly reliable guidelines:
   make sure the information is in the right place. If your tests are too strict,
   it will be impossible to make even simple tweaks to your templates without
   breaking the build.
-
-<p data-visibility='hidden'>View <a href='https://learn.co/lessons/ruby-rails-testing' title='Testing in Rails'>Testing in Rails</a> on Learn.co and start learning to code for free.</p>
