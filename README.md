@@ -501,3 +501,4 @@ These can serve as fairly reliable guidelines:
   make sure the information is in the right place. If your tests are too strict,
   it will be impossible to make even simple tweaks to your templates without
   breaking the build.
+  
